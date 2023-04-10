@@ -19,13 +19,13 @@ app.use(cors())
 app.use(bodyparser.json())
 
 app.get("/login", async (req, res) => {
-	let result;
+	let result
 	if (!("username" in req.query && "pwd" in req.query)) {
 		req.send(400, "Invalid Request Format")
 	}
 	console.log("Login Request")
 	try {
-		result = await pool.query("SELECT * FROM users WHERE username=$1;", [req.query.username])
+		result = await pool.query("SELECT * FROM users WHERE username=$1", [req.query.username])
 	} catch (err) {
 		console.log("Query Failed", err)
 		res.status(500).send(err)
@@ -70,7 +70,7 @@ app.get("/sensors", async (req, res) => {
 		return
 	}
 
-	let token;
+	let token
 	try {
 		token = jwt.verify(req.query.token, SECRET_KEY)
 	} catch (err) {
@@ -79,7 +79,7 @@ app.get("/sensors", async (req, res) => {
 	}
 	console.log(token)
 
-	let result;
+	let result
 	try {
 		result = await pool.query("SELECT sensorname, sensorid, units FROM sensors WHERE ownerid=$1", [token.userid])
 		// result = await pool.query("SELECT * FROM sensors")
@@ -96,14 +96,65 @@ app.get("/sensors", async (req, res) => {
 	
 })
 
-app.get("/data", (req, res) => {
-	// maybe I can get the username and password from the token itself?
+app.get("/data", async (req, res) => {
 	// res.send(200, req.query)
 	// {token, sensorid, to?, from?} -> {data, sensorid, to, from}
 	console.log("Data Request")
 	if (!("sensorid" in req.query && "token" in req.query)) {
 		req.send(400, "Invalid Request Format")
 	}
+	let token
+	try {
+		token = jwt.verify(req.query.token, SECRET_KEY)
+	} catch (err) {
+		res.send(498, "Invalid Request Token")
+		return
+	}
+	console.log(token)
+
+	let range_condition = ""
+	let query_subs = [req.query.sensorid]
+	if ("to" in req.query) {
+		range_condition += `AND time < $${query_subs.length+1}`
+		query_subs.push(new Date(parseInt(req.query.to)).toISOString())
+	}
+	if ("from" in req.query) {
+		range_condition += `AND time >= $${query_subs.length+1}`
+		query_subs.push(new Date(parseInt(req.query.from)).toISOString())
+	}
+
+	let result
+	console.log(range_condition, query_subs)
+	try {
+		result = await pool.query(`
+			SELECT time, val FROM sensor_data
+			WHERE
+				sensorid=$1
+				${range_condition}
+			ORDER BY time`, query_subs)
+	} catch (err) {
+		console.log("Query Failed", err)
+		res.status(500).send(err)
+		// res.status(500).send("error")
+		return
+	}
+	
+	// console.log(result.rows[0].time, result.rows[result.rows.length-1].time)
+	console.log(token.username)
+	
+	if (result.rows.length <= 0) {
+		res.send(200, {data: result.rows, sensorid: sensorid})
+		return
+	}
+
+	console.log(result.rows[0], token)
+	
+	// from is inclusive
+	let from = new Date(result.rows[0].time).getTime()
+	// to is exclusive
+	let to   = new Date(result.rows[result.rows.length-1].time).getTime()+1
+	
+	res.send(200, {data: result.rows, sensorid: req.query.sensorid, to: to, from: from})
 })
 
 app.listen(34258, "localhost", () => {
