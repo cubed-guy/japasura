@@ -1,3 +1,6 @@
+// http://localhost:34258/login?username=samarth&pwd=150a14ed5bea6cc731cf86c41566ac427a8db48ef1b9fd626664b3bfbb99071fa4c922f33dde38719b8c8354e2b7ab9d77e0e67fc12843920a712e73d558e197
+// http://localhost:34258/data?sensorid=1&to=1680157231995&token=<token>
+
 const express = require("express")
 const cors = require("cors")
 const jwt = require("jsonwebtoken")
@@ -21,7 +24,8 @@ app.use(bodyparser.json())
 app.get("/login", async (req, res) => {
 	let result
 	if (!("username" in req.query && "pwd" in req.query)) {
-		req.send(400, "Invalid Request Format")
+		res.send(400, "Invalid Request Format")
+		return
 	}
 	console.log("Login Request")
 	try {
@@ -66,7 +70,7 @@ app.get("/sensors", async (req, res) => {
 	// {token} -> [{}]
 	console.log("Sensor Request")
 	if (!("token" in req.query)) {
-		req.send(400, "Invalid Request Format")
+		res.send(400, "Invalid Request Format")
 		return
 	}
 
@@ -101,7 +105,8 @@ app.get("/data", async (req, res) => {
 	// {token, sensorid, to?, from?} -> {data, sensorid, to, from}
 	console.log("Data Request")
 	if (!("sensorid" in req.query && "token" in req.query)) {
-		req.send(400, "Invalid Request Format")
+		res.send(400, "Invalid Request Format")
+		return
 	}
 	let token
 	try {
@@ -111,6 +116,27 @@ app.get("/data", async (req, res) => {
 		return
 	}
 	console.log(token)
+
+	let result
+
+	try {
+		result = await pool.query("SELECT ownerid FROM sensors WHERE sensorid=$1", [req.query.sensorid])
+	} catch (err) {
+		console.log("Query Failed", err)
+		res.status(500).send(err)
+		// res.status(500).send("error")
+		return
+	}
+
+	// there should be 1 or 0 rows
+	if (result.rows.length <= 0) {  // sensor does not exist
+		request.states(404).send("Sensor not found")
+		return;
+	}
+	if (result.rows[0].ownerid !== token.userid) {  // user does not own the sensor
+		request.states(404).send("Sensor not found")
+		return;
+	}
 
 	let range_condition = ""
 	let query_subs = [req.query.sensorid]
@@ -123,7 +149,6 @@ app.get("/data", async (req, res) => {
 		query_subs.push(new Date(parseInt(req.query.from)).toISOString())
 	}
 
-	let result
 	console.log(range_condition, query_subs)
 	try {
 		result = await pool.query(`
