@@ -141,11 +141,11 @@ app.get("/data", async (req, res) => {
 	let range_condition = ""
 	let query_subs = [req.query.sensorid]
 	if ("to" in req.query) {
-		range_condition += `AND time < $${query_subs.length+1}`
+		range_condition += ` AND time < $${query_subs.length+1}`
 		query_subs.push(new Date(parseInt(req.query.to)).toISOString())
 	}
 	if ("from" in req.query) {
-		range_condition += `AND time >= $${query_subs.length+1}`
+		range_condition += ` AND time >= $${query_subs.length+1}`
 		query_subs.push(new Date(parseInt(req.query.from)).toISOString())
 	}
 
@@ -182,6 +182,6 @@ app.get("/data", async (req, res) => {
 	res.send(200, {data: result.rows, sensorid: req.query.sensorid, to: to, from: from})
 })
 
-app.listen(34258, "localhost", () => {
+app.listen(34258, "0.0.0.0", () => {
 	console.log("Server Started")
 })
