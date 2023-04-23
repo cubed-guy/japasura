@@ -16,7 +16,7 @@ const pool = new Pool ({
 
 const SECRET_KEY = '<NO KEY YET>'  // secret key?
 
-app = express()
+const app = express()
 
 app.use(cors())
 app.use(bodyparser.json())
@@ -130,11 +130,11 @@ app.get("/data", async (req, res) => {
 
 	// there should be 1 or 0 rows
 	if (result.rows.length <= 0) {  // sensor does not exist
-		request.states(404).send("Sensor not found")
+		res.status(404).send("Sensor not found")
 		return;
 	}
 	if (result.rows[0].ownerid !== token.userid) {  // user does not own the sensor
-		request.states(404).send("Sensor not found")
+		res.status(404).send("Sensor not found")
 		return;
 	}
 
@@ -168,7 +168,7 @@ app.get("/data", async (req, res) => {
 	console.log(token.username)
 	
 	if (result.rows.length <= 0) {
-		res.send(200, {data: result.rows, sensorid: sensorid})
+		res.send(200, {data: result.rows, sensorid: req.query.sensorid})
 		return
 	}
 
