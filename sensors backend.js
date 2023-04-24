@@ -21,7 +21,7 @@ const app = express()
 app.use(cors())
 app.use(bodyparser.json())
 
-app.get("/login", async (req, res) => {
+app.get("/login", async (req, res, next) => {
 	let result
 	if (!("username" in req.query && "pwd" in req.query)) {
 		res.send(400, "Invalid Request Format")
@@ -31,7 +31,8 @@ app.get("/login", async (req, res) => {
 	try {
 		result = await pool.query("SELECT * FROM users WHERE username=$1", [req.query.username])
 	} catch (err) {
-		console.log("Query Failed", {err: err, msg: "Query to database for user information failed"})
+		err = {err: err, msg: "Query to database for user information failed"}
+		console.log("Query Failed", err)
 		res.status(500).send(err)
 		// res.status(500).send("error")
 		return
@@ -66,7 +67,7 @@ app.get("/login", async (req, res) => {
 	res.send(201, token)
 })
 
-app.get("/sensors", async (req, res) => {
+app.get("/sensors", async (req, res, next) => {
 	// {token} -> [{}]
 	console.log("Sensor Request")
 	if (!("token" in req.query)) {
@@ -100,7 +101,7 @@ app.get("/sensors", async (req, res) => {
 	
 })
 
-app.get("/data", async (req, res) => {
+app.get("/data", async (req, res, next) => {
 	// res.send(200, req.query)
 	// {token, sensorid, to?, from?} -> {data, sensorid, to, from}
 	console.log("Data Request")
