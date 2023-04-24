@@ -31,7 +31,7 @@ app.get("/login", async (req, res) => {
 	try {
 		result = await pool.query("SELECT * FROM users WHERE username=$1", [req.query.username])
 	} catch (err) {
-		console.log("Query Failed", err)
+		console.log("Query Failed", {err: err, msg: "Query to database for user information failed"})
 		res.status(500).send(err)
 		// res.status(500).send("error")
 		return
@@ -89,7 +89,7 @@ app.get("/sensors", async (req, res) => {
 		// result = await pool.query("SELECT * FROM sensors")
 	} catch (err) {
 		console.log("Query Failed", err)
-		res.status(500).send(err)
+		res.status(500).send({err: err, msg: "Query to database for sensor information failed"})
 		// res.status(500).send("error")
 		return
 
@@ -123,7 +123,7 @@ app.get("/data", async (req, res) => {
 		result = await pool.query("SELECT ownerid FROM sensors WHERE sensorid=$1", [req.query.sensorid])
 	} catch (err) {
 		console.log("Query Failed", err)
-		res.status(500).send(err)
+		res.status(500).send({err: err, msg: "Could not query ownerid info from database"})
 		// res.status(500).send("error")
 		return
 	}
@@ -159,7 +159,7 @@ app.get("/data", async (req, res) => {
 			ORDER BY time`, query_subs)
 	} catch (err) {
 		console.log("Query Failed", err)
-		res.status(500).send(err)
+		res.status(500).send({err: err, msg: "Query to database for sensor data failed"})
 		// res.status(500).send("error")
 		return
 	}
