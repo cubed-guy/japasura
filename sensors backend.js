@@ -64,8 +64,71 @@ app.get("/login", async (req, res, next) => {
 		},
 	)
 
+	console.log(record.userid)
+
 	res.send(201, token)
 })
+
+app.get("/sensor_change", async (req, res, next) => {
+	// {token} -> [{}]
+	console.log("Sensor Request")
+	if (!("token" in req.query && "sensorid" in req.query)) {
+		res.send(400, "Invalid Request Format")
+		return
+	}
+
+	//sensor_change?sensor_id&units?&sensorname
+
+	let token
+	try {
+		token = jwt.verify(req.query.token, SECRET_KEY)
+	} catch (err) {
+		res.send(498, "Invalid Request Token")
+		return
+	}
+	console.log(token)
+
+	if (token.userid !== 1) {
+		res.status(401).send("Unauthorized request for changing sensor metadata")
+		return
+	}
+
+	let params = [req.query.sensorid]
+	let sets = []
+
+	if ("sensorname" in req.query) {
+		sets.push(`sensorname=$${params.length + 1}`)
+		params.push(req.query.sensorname)
+	}
+	if ("units" in req.query) {
+		sets.push(`units=$${params.length + 1}`)
+		params.push(req.query.units)
+	}
+	
+	if (params.length === 0) {
+		res.send(400, "Invalid Request Format: Too few parameters")
+		return
+	}
+	
+	let result
+	try {
+		const query = `UPDATE sensors SET ${sets.join(", ")} WHERE sensorid=$1`
+		result = await pool.query(query, params)
+		console.log(query)
+		// result = await pool.query("SELECT * FROM sensors")
+	} catch (err) {
+		console.log("Query Failed", err)
+		res.status(500).send({err: err, msg: "Query to database for sensor information failed"})
+		// res.status(500).send("error")
+		return
+
+	}
+	
+	res.send(200, {rows: result.rows})
+	console.log(token.userid)
+	
+})
+
 
 app.get("/sensors", async (req, res, next) => {
 	// {token} -> [{}]
