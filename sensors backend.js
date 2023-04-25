@@ -60,7 +60,7 @@ app.get("/login", async (req, res, next) => {
 		},
 		SECRET_KEY,
 		{
-			expiresIn: "10m"
+			expiresIn: "300m"
 		},
 	)
 
